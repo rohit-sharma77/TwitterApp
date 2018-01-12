@@ -1,0 +1,123 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="">
+    <h1>Twitter Feed Reader</h1>
+    <p class="lead">Timeline Activity</p>
+</div>
+<div class="row">
+    <div class="col-md-4">
+        <input type="number" max="20" min="1" class="pull-left" value="10" readonly="readonly" placeholder="Number of records" id="count" onkeypress="return isNumber(event)" />
+        <input type="text" class="pull-right" value="Salesforce" placeholder="Screen name" id="screenname" />
+    </div>
+    <div class="col-md-4">
+        <input type="button" class="pull-left" value="Read Tweets" id="readtweets" onclick="readTweets()"/>
+    </div>
+    <div class="col-md-4">        
+    </div>
+    <div class="col-md-4 i">
+        <input type="text" class="pull-right" onkeyup="findValue()" placeholder="Find key" id="txtvalue" />
+    </div>
+ </div>
+<hr />
+<div>
+    <h5>Last update time : </h5><h6 id="lsttime"></h6>
+    <div class="col-md-12" id="bindString">
+    </div>
+</div>
+
+<div id="firstContent"></div>
+
+@section scripts{
+    <script>
+        // Call to the funcation when the page gets loaded
+        $(document).ready(function () {
+            getTweets();
+        });
+
+        // Reload the page after 60 secs.
+        setInterval(function () {
+            getTweets();
+        }, 60000);
+
+        // Call to function GetDetails by making an async http request
+        function getTweets() {
+            var count = $('#count').val();
+            var name = $('#screenname').val();
+            $.ajax({
+                type: "GET",
+                url: "home/GetDetails",
+                data: {'count': count, 'name' : name},
+                success: function (response) {
+                    bindData(response);
+                }
+            })
+        }
+
+        // Button click event to read the tweets
+        $('#readtweets').click(function () {
+            var count = $('#count').val();
+            var name = $('#screenname').val();            
+            $.ajax({
+                url: "home/GetDetails",
+                data: { 'count': count, 'name': name },
+                type: "post",
+                cache: false,
+                success: function (response) {
+                    bindData(response);
+                }
+            })
+        })
+
+        // Bind the response to the page
+        function bindData(data) {                        
+            // Table header
+            var bindString = "<table class='response table' id='infotable'><thead><tr><td>User Name</td><td>Screen Name</td><td>Profile Image</td><td>Tweet</td><td>Tweet Date</td><td>Image</td><td>Count</td></tr></thead>";
+            // Display the empty table if there is no data
+            if (data != undefined) {
+                data = JSON.parse(data); // parse the incoming data
+                for (var index = 0; index < data.length; index++) {
+                    bindString += "<tbody><tr>";
+                    bindString += "<td>" + data[index].user.name + "</td>";
+                    bindString += "<td>" + data[index].user.screen_name + "</td>";
+                    bindString += "<td><img src='" + data[index].user.profile_image_url + "'/></td>";
+                    bindString += "<td id='tweet'>" + data[index].text + "</td>";
+                    bindString += "<td>" + data[index].created_at + "</td>";
+                    if (data[index].extended_entities != undefined) {
+                        bindString += "<td><img style='height: 150px;width: 300px;' src='" + data[index].extended_entities.media[0].media_url + "'/></td>";
+                    }
+                    else {
+                        bindString += "<td>No Image</td>";
+                    }
+                    bindString += "<td>" + data[index].retweet_count + "</td>";
+                }
+            }
+            bindString += "</tr></tbody>";
+            bindString += "</table>";
+            $("#bindString").html(bindString);
+            $("#lsttime").html(new Date().toTimeString());
+        }
+
+        // Function to search the key in the feed
+        function findValue() {
+            var filter = $("#txtvalue").val().toUpperCase();
+            $("body").find("#infotable > tbody >tr > #tweet ").each(function (index, item) {
+                if (item.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                    item.parentElement.style.display = "";
+                } else {
+                    item.parentElement.style.display = "none";
+                }
+            })
+        }
+
+        // Event handler for key press event
+        function isNumberKey(event) {
+            var charCode = (event.which) ? event.which : event.keyCode
+            if (charCode > 31 && (charCode < 48 || charCode > 57))
+                return false;
+            return true;
+        }
+
+    </script>
+    }
